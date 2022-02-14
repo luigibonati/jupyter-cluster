@@ -216,7 +216,7 @@ do
                 shift
                 shift
                 ;;
-                -j|--julia
+                -j|--julia)
                 JNB_JKERNEL=$2
                 shift
                 shift
