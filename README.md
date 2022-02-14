@@ -84,12 +84,9 @@ $ ./start_jupyter_nb.sh --help
 
 Usage: start_jupyter_nb.sh [options]
 
-Options:
+Required options:
 
         -u | --username       USERNAME         ETH username for SSH connection to Euler
-        -n | --numcores       NUM_CPU          Number of CPU cores to be used on the cluster
-        -W | --runtime        RUN_TIME         Run time limit for jupyter notebook/lab in hours and minutes HH:MM
-        -m | --memory         MEM_PER_CORE     Memory limit in MB per core
 
 Optional arguments:
 
@@ -98,15 +95,21 @@ Optional arguments:
         -g | --numgpu         NUM_GPU          Number of GPUs to be used on the cluster
         -h | --help                            Display help for this script and quit
         -i | --interval       INTERVAL         Time interval for checking if the job on the cluster already started
+        -j | --julia          BOOL             Start jupyter notebook with (BOOL=TRUE) or without (BOOL=FALSE) julia kernel enabled
         -k | --key            SSH_KEY_PATH     Path to SSH key with non-standard name
         -l | --lab                             Start jupyter lab instead of a jupyter notebook
+        -m | --memory         MEM_PER_CORE     Memory limit in MB per core
+        -n | --numcores       NUM_CPU          Number of CPU cores to be used on the cluster
         -s | --softwarestack  SOFTWARE_STACK   Software stack to be used (old, new)
         -v | --version                         Display version of the script and exit
         -w | --workdir        WORKING_DIR      Working directory for the jupyter notebook/lab
+        -W | --runtime        RUN_TIME         Run time limit for jupyter notebook/lab in hours and minutes HH:MM
 
 Examlples:
 
         ./start_jupyter_nb.sh -u sfux -n 4 -W 04:00 -m 2048 -w /cluster/scratch/sfux
+
+        ./start_jupyter_nb.sh -u sfxu -n 1 -W 01:00 -m 1024 -j TRUE
 
         ./start_jupyter_nb.sh --username sfux --numcores 2 --runtime 01:30 --memory 2048 --softwarestack new
 
@@ -125,7 +128,7 @@ JNB_SOFTWARE_STACK="new"    # Software stack to be used (old, new)
 JNB_WORKING_DIR=""          # Working directory for jupyter notebook/lab
 JNB_ENV=""                  # Path to virtual environment
 JNB_JLAB=""                 # "lab" -> start jupyter lab; "" -> start jupyter notebook
-
+JNB_JKERNEL="FALSE"         # "FALSE" -> no Julia kernel; "TRUE" -> Julia kernel
 
 
 ```

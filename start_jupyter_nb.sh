@@ -123,7 +123,7 @@ Optional arguments:
         -g | --numgpu         NUM_GPU          Number of GPUs to be used on the cluster
         -h | --help                            Display help for this script and quit
         -i | --interval       INTERVAL         Time interval for checking if the job on the cluster already started
-        -j | --julia          BOOL             Start jupyter notebook with (BOOL="TRUE") or without (BOOL="FALSE") julia kernel enabled
+        -j | --julia          BOOL             Start jupyter notebook with (BOOL=TRUE) or without (BOOL=FALSE) julia kernel enabled
         -k | --key            SSH_KEY_PATH     Path to SSH key with non-standard name
         -l | --lab                             Start jupyter lab instead of a jupyter notebook
         -m | --memory         MEM_PER_CORE     Memory limit in MB per core
