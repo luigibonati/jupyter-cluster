@@ -220,6 +220,7 @@ do
                 JNB_JKERNEL=$2
                 shift
                 shift
+                ;;
                 -k|--key)
                 JNB_SSH_KEY_PATH=$2
                 shift
