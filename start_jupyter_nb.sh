@@ -345,7 +345,7 @@ fi
 
 # check if JNB_JKERNEL is TRUE or FALSE and if the new software stack is used (julia kernel not supported with the old software stack)
 if [ "$JNB_JKERNEL" == "TRUE" ]; then
-        JNB_JULIA="julia/1.6.2"
+        JNB_JULIA="julia/1.6.5"
         if [ "$JNB_SOFTWARE_STACK" = "old" ]; then
                 echo -e "Error: The Julia kernel is only supported when using the new software stack. Please change the software stack and try again\n"
                 display_help
