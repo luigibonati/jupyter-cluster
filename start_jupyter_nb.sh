@@ -13,6 +13,8 @@
 #  Version        : 1.0                                                       #
 #  Change history :                                                           #
 #                                                                             #
+#  14.02.2022    Adding option -j for julia kernel to the script              #
+#                                                                             #
 #  14.02.2022    Bringing back bash and R kernels                             #
 #                                                                             #
 #  04.11.2021    Added support for Jupyter lab                                # 
@@ -97,6 +99,9 @@ JNB_ENV=""
 # jupyter lab default           : empty string (will start a notebook instead of lab)
 JNB_JLAB=""
 
+# julia kernels                 : FALSE -> no julia kernel; TRUE -> julia kernel
+JNB_JKERNEL="FALSE"
+
 ###############################################################################
 # Usage instructions                                                          #
 ###############################################################################
@@ -118,6 +123,7 @@ Optional arguments:
         -g | --numgpu         NUM_GPU          Number of GPUs to be used on the cluster
         -h | --help                            Display help for this script and quit
         -i | --interval       INTERVAL         Time interval for checking if the job on the cluster already started
+        -j | --julia          BOOL             Start jupyter notebook with (BOOL="TRUE") or without (BOOL="FALSE") julia kernel enabled
         -k | --key            SSH_KEY_PATH     Path to SSH key with non-standard name
         -l | --lab                             Start jupyter lab instead of a jupyter notebook
         -m | --memory         MEM_PER_CORE     Memory limit in MB per core
@@ -148,6 +154,7 @@ JNB_SOFTWARE_STACK="new"    # Software stack to be used (old, new)
 JNB_WORKING_DIR=""          # Working directory for jupyter notebook/lab
 JNB_ENV=""                  # Path to virtual environment
 JNB_JLAB=""                 # "lab" -> start jupyter lab; "" -> start jupyter notebook
+JNB_JKERNEL="FALSE"         # "FALSE" -> no Julia kernel; "TRUE" -> Julia kernel
 
 EOF
 exit 1
@@ -207,6 +214,10 @@ do
                 shift
                 shift
                 ;;
+                -j|--julia
+                JNB_JKERNEL=$2
+                shift
+                shift
                 -k|--key)
                 JNB_SSH_KEY_PATH=$2
                 shift
@@ -329,6 +340,21 @@ else
     echo -e "Setting waiting time interval for checking the start of the job to $JNB_WAITING_INTERVAL seconds"
 fi
 
+# check if JNB_JKERNEL is TRUE or FALSE and if the new software stack is used (julia kernel not supported with the old software stack)
+if [ "$JNB_JKERNEL" == "TRUE" ]; then
+        JNB_JULIA="julia/1.6.2"
+        if [ "$JNB_SOFTWARE_STACK" = "old" ]; then
+                echo -e "Error: The Julia kernel is only supported when using the new software stack. Please change the software stack and try again\n"
+                display_help
+        fi
+        echo -e "Enabling Julia kernel"
+elif [ "$JNB_JKERNEL" == "FALSE" ]; then
+        JNB_JULIA=""
+else
+        echo -e "Error: \$JNB_JKERNEL can only have the values TRUE or FALSE. Please specify a correct value for the -j/--julia parameter and try again\n"
+        display_help
+fi
+
 # check which software stack to use
 case $JNB_SOFTWARE_STACK in
         old)
@@ -337,11 +363,11 @@ case $JNB_SOFTWARE_STACK in
         ;;
         new)
         if [ "$JNB_NUM_GPU" -gt "0" ]; then
-            JNB_MODULE_COMMAND="gcc/6.3.0 r/4.0.2 python_gpu/3.8.5 eth_proxy"
-            echo -e "Using new software stack (gcc/6.3.0 python_gpu/3.8.5 eth_proxy)"
+            JNB_MODULE_COMMAND="gcc/6.3.0 r/4.0.2 python_gpu/3.8.5 eth_proxy $JNB_JULIA"
+            echo -e "Using new software stack (gcc/6.3.0 python_gpu/3.8.5 eth_proxy $JNB_JULIA)"
         else
-            JNB_MODULE_COMMAND="gcc/6.3.0 r/4.0.2 python/3.8.5 eth_proxy"
-            echo -e "Using new software stack (gcc/6.3.0 python/3.8.5 eth_proxy)"
+            JNB_MODULE_COMMAND="gcc/6.3.0 r/4.0.2 python/3.8.5 eth_proxy $JNB_JULIA"
+            echo -e "Using new software stack (gcc/6.3.0 python/3.8.5 eth_proxy $JNB_JULIA)"
         fi  
         ;;
         *)
