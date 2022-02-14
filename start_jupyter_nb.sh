@@ -13,6 +13,8 @@
 #  Version        : 1.0                                                       #
 #  Change history :                                                           #
 #                                                                             #
+#  14.02.2022    Bringing back bash and R kernels                             #
+#                                                                             #
 #  04.11.2021    Added support for Jupyter lab                                # 
 #                                                                             #
 #  02.11.2021    Added virtual environment support                            #
@@ -46,7 +48,7 @@
 ###############################################################################
 
 # Version
-JNB_VERSION="1.1"
+JNB_VERSION="1.2"
 
 # Script directory
 JNB_SCRIPTDIR=$(pwd)
@@ -335,10 +337,10 @@ case $JNB_SOFTWARE_STACK in
         ;;
         new)
         if [ "$JNB_NUM_GPU" -gt "0" ]; then
-            JNB_MODULE_COMMAND="gcc/6.3.0 python_gpu/3.8.5 eth_proxy"
+            JNB_MODULE_COMMAND="gcc/6.3.0 r/4.0.2 python_gpu/3.8.5 eth_proxy"
             echo -e "Using new software stack (gcc/6.3.0 python_gpu/3.8.5 eth_proxy)"
         else
-            JNB_MODULE_COMMAND="gcc/6.3.0 python/3.8.5 eth_proxy"
+            JNB_MODULE_COMMAND="gcc/6.3.0 r/4.0.2 python/3.8.5 eth_proxy"
             echo -e "Using new software stack (gcc/6.3.0 python/3.8.5 eth_proxy)"
         fi  
         ;;
