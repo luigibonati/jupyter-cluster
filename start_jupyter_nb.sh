@@ -411,20 +411,20 @@ JNB_SSH_OPT="$JNB_SKPATH $JNB_USERNAME@$JNB_HOSTNAME"
 
 # check for reconnect_info in the current directory on the local computer
 echo -e "Checking for left over files from previous sessions"
-if [ -f $JNB_SCRIPTDIR/reconnect_info ]; then
+if [ -f "$JNB_SCRIPTDIR/reconnect_info" ]; then
         echo -e "Found old reconnect_info file, deleting it ..."
-        rm $JNB_SCRIPTDIR/reconnect_info
+        rm "$JNB_SCRIPTDIR/reconnect_info"
 fi
 
 # check for log files from a previous session in the home directory of the cluster
 ssh -T $JNB_SSH_OPT <<ENDSSH
-if [ -f /cluster/home/$JNB_USERNAME/jnbinfo ]; then
+if [ -f "/cluster/home/$JNB_USERNAME/jnbinfo" ]; then
         echo -e "Found old jnbinfo file, deleting it ..."
-        rm /cluster/home/$JNB_USERNAME/jnbinfo
+        rm "/cluster/home/$JNB_USERNAME/jnbinfo"
 fi
-if [ -f /cluster/home/$JNB_USERNAME/jnbip ]; then
+if [ -f "/cluster/home/$JNB_USERNAME/jnbip" ]; then
 	echo -e "Found old jnbip file, deleting it ..."
-        rm /cluster/home/$JNB_USERNAME/jnbip
+        rm "/cluster/home/$JNB_USERNAME/jnbip"
 fi 
 ENDSSH
 
