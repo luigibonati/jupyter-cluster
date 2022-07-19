@@ -105,7 +105,7 @@ Optional arguments:
         -w | --workdir        WORKING_DIR      Working directory for the jupyter notebook/lab
         -W | --runtime        RUN_TIME         Run time limit for jupyter notebook/lab in hours and minutes HH:MM
 
-Examlples:
+Examples:
 
         ./start_jupyter_nb.sh -u sfux -n 4 -W 04:00 -m 2048 -w /cluster/scratch/sfux
 

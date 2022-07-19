@@ -139,7 +139,7 @@ Optional arguments:
              --extra-modules  EXTRA_MODULES    Load additional cluster modules before starting
         -W | --runtime        RUN_TIME         Run time limit for jupyter notebook/lab in hours and minutes HH:MM
 
-Examlples:
+Examples:
 
         ./start_jupyter_nb.sh -u sfux -n 4 -W 04:00 -m 2048 -w /cluster/scratch/sfux
 
