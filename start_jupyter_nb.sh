@@ -13,6 +13,8 @@
 #  Version        : 1.0                                                       #
 #  Change history :                                                           #
 #                                                                             #
+#  19.07.2022    Add option --extra-modules                                   #
+#                                                                             #
 #  14.02.2022    Adding option -j for julia kernel to the script              #
 #                                                                             #
 #  14.02.2022    Bringing back bash and R kernels                             #
@@ -102,6 +104,9 @@ JNB_JLAB=""
 # julia kernels                 : FALSE -> no julia kernel; TRUE -> julia kernel
 JNB_JKERNEL="FALSE"
 
+# Extra cluster modules         : no additional modules
+JNB_EXTRA_MODULES=()
+
 ###############################################################################
 # Usage instructions                                                          #
 ###############################################################################
@@ -131,6 +136,7 @@ Optional arguments:
         -s | --softwarestack  SOFTWARE_STACK   Software stack to be used (old, new)
         -v | --version                         Display version of the script and exit
         -w | --workdir        WORKING_DIR      Working directory for the jupyter notebook/lab
+             --extra-modules  EXTRA_MODULES    Load additional cluster modules before starting
         -W | --runtime        RUN_TIME         Run time limit for jupyter notebook/lab in hours and minutes HH:MM
 
 Examlples:
@@ -237,6 +243,11 @@ do
                 ;;
                 -w|--workdir)
                 JNB_WORKING_DIR=$2
+                shift
+                shift
+                ;;
+                --extra-modules)
+                JNB_EXTRA_MODULES=( $2 )
                 shift
                 shift
                 ;;
@@ -378,6 +389,7 @@ case $JNB_SOFTWARE_STACK in
         display_help
         ;;
 esac
+JNB_MODULE_COMMAND+=" ${JNB_EXTRA_MODULES[@]}"
 
 # check if JNB_SSH_KEY_PATH is empty or contains a valid path
 if [ -z "$JNB_SSH_KEY_PATH" ]; then
