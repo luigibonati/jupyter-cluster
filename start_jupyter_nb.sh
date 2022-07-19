@@ -7,7 +7,7 @@
 #  Main author    : Samuel Fux                                                #
 #  Contributions  : Jarunan Panyasantisuk, Andrei Plamada, Swen Vermeul,      #
 #                   Urban Borsnik, Steven Armstrong, Henry Lütcke,            #
-#                   Gül Sena Altıntaş, Mikolaj Rybinski                       #
+#                   Gül Sena Altıntaş, Mikolaj Rybinski, Gerhard Bräunlich    #
 #  Date           : December 2018                                             #
 #  Location       : ETH Zurich                                                #
 #  Version        : 1.0                                                       #
