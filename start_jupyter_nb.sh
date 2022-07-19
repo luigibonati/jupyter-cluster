@@ -270,10 +270,12 @@ if [ -f "$JNB_CONFIG_FILE" ]; then
         source "$JNB_CONFIG_FILE"
 fi
 
-# check that JNB_USERNAME is not an empty string
+# check that JNB_USERNAME is not an empty string when there is no entry in ~/.ssh/config
 if [ -z "$JNB_USERNAME" ]; then
-        echo -e "Error: No ETH username is specified, terminating script\n"
-        display_help
+        if ! grep -q "^[Hh][Oo][Ss][Tt] \(.* \)\?euler.ethz.ch\( .*\)\?$" "$HOME/.ssh/config" ; then
+            echo -e "Error: No ETH username is specified, terminating script\n"
+            display_help
+        fi
 else
         echo -e "ETH username: $JNB_USERNAME"
 fi
@@ -413,8 +415,11 @@ if [ "$JNB_ENV" != "" ]; then
 fi
 
 # put together string for SSH options
-JNB_SSH_OPT="$JNB_SKPATH $JNB_USERNAME@$JNB_HOSTNAME"
-
+if [ -z "$JNB_USERNAME" ]; then
+    JNB_SSH_OPT="$JNB_SKPATH $JNB_HOSTNAME"
+else
+    JNB_SSH_OPT="$JNB_SKPATH $JNB_USERNAME@$JNB_HOSTNAME"
+fi
 ###############################################################################
 # Check for leftover files                                                    #
 ###############################################################################
@@ -430,13 +435,13 @@ fi
 
 # check for log files from a previous session in the home directory of the cluster
 ssh -T $JNB_SSH_OPT <<ENDSSH
-if [ -f "/cluster/home/$JNB_USERNAME/jnbinfo" ]; then
+if [ -f "\$HOME/jnbinfo" ]; then
         echo -e "Found old jnbinfo file, deleting it ..."
-        rm "/cluster/home/$JNB_USERNAME/jnbinfo"
+        rm "\$HOME/jnbinfo"
 fi
-if [ -f "/cluster/home/$JNB_USERNAME/jnbip" ]; then
+if [ -f "\$HOME/jnbip" ]; then
 	echo -e "Found old jnbip file, deleting it ..."
-        rm "/cluster/home/$JNB_USERNAME/jnbip"
+        rm "\$HOME/jnbip"
 fi 
 ENDSSH
 
@@ -452,16 +457,16 @@ module load $JNB_MODULE_COMMAND
 if [ "$JNB_ENV" != "" ]; then echo -e "Activating the $JNB_ENV"; source $JNB_ENV/bin/activate; fi
 export XDG_RUNTIME_DIR=
 JNB_IP_REMOTE="\$(hostname -i)"
-echo "Remote IP:\$JNB_IP_REMOTE" >> /cluster/home/$JNB_USERNAME/jnbip
+echo "Remote IP:\$JNB_IP_REMOTE" >> \$HOME/jnbip
 export JNB_RUN_TIME=$JNB_RUN_TIME
 export JNB_START_TIME=`date +"%Y-%m-%dT%H:%M:%S%z"`
-jupyter $JNB_START_OPTION --no-browser --ip "\$JNB_IP_REMOTE" $JNB_SWORK_DIR &> /cluster/home/$JNB_USERNAME/jnbinfo
+jupyter $JNB_START_OPTION --no-browser --ip "\$JNB_IP_REMOTE" $JNB_SWORK_DIR &> \$HOME/jnbinfo
 ENDBSUB
 
-# wait until jupyter notebook/lab has started, poll every $JNB_WAITING_INTERVAL seconds to check if /cluster/home/$JNB_USERNAME/jnbinfo exists
+# wait until jupyter notebook/lab has started, poll every $JNB_WAITING_INTERVAL seconds to check if $HOME/jnbinfo exists
 # once the file exists and is not empty, the notebook/lab has been startet and is listening
 ssh $JNB_SSH_OPT <<ENDSSH
-while ! [ -e /cluster/home/$JNB_USERNAME/jnbinfo -a -s /cluster/home/$JNB_USERNAME/jnbinfo ]; do
+while ! [ -e \$HOME/jnbinfo -a -s \$HOME/jnbinfo ]; do
         echo 'Waiting for jupyter $JNB_START_OPTION to start, sleep for $JNB_WAITING_INTERVAL sec'
         sleep $JNB_WAITING_INTERVAL
 done
@@ -469,16 +474,16 @@ ENDSSH
 
 # get remote ip, port and token from files stored on Euler
 echo -e "Receiving ip, port and token from jupyter $JNB_START_OPTION"
-JNB_REMOTE_IP=$(ssh $JNB_SSH_OPT "cat /cluster/home/$JNB_USERNAME/jnbip | grep -m1 'Remote IP' | cut -d ':' -f 2")
-JNB_REMOTE_PORT=$(ssh $JNB_SSH_OPT "cat /cluster/home/$JNB_USERNAME/jnbinfo | grep -m1 token | cut -d '/' -f 3 | cut -d ':' -f 2")
-JNB_TOKEN=$(ssh $JNB_SSH_OPT "cat /cluster/home/$JNB_USERNAME/jnbinfo | grep -m1 token | cut -d '=' -f 2")
+JNB_REMOTE_IP=$(ssh $JNB_SSH_OPT "cat \$HOME/jnbip | grep -m1 'Remote IP' | cut -d ':' -f 2")
+JNB_REMOTE_PORT=$(ssh $JNB_SSH_OPT "cat \$HOME/jnbinfo | grep -m1 token | cut -d '/' -f 3 | cut -d ':' -f 2")
+JNB_TOKEN=$(ssh $JNB_SSH_OPT "cat \$HOME/jnbinfo | grep -m1 token | cut -d '=' -f 2")
 
 # check if the IP, the port and the token are defined
 if  [[ "$JNB_REMOTE_IP" == "" ]]; then
 cat <<EOF
 Error: remote ip is not defined. Terminating script.
 * Please check login to the cluster and check with bjobs if the batch job on the cluster is running and terminate it with bkill.
-* Please check the /cluster/home/$JNB_USERNAME/jnbinfo for logs regarding the failure to identify the remote ip on the cluster
+* Please check the $HOME/jnbinfo for logs regarding the failure to identify the remote ip on the cluster
 EOF
 exit 1
 fi
@@ -487,7 +492,7 @@ if  [[ "$JNB_REMOTE_PORT" == "" ]]; then
 cat <<EOF
 Error: remote port is not defined. Terminating script.
 * Please check login to the cluster and check with bjobs if the batch job on the cluster is running and terminate it with bkill.
-* Please check the /cluster/home/$JNB_USERNAME/jnbinfo for logs regarding the failure to identify the remote ip on the cluster
+* Please check the $HOME/jnbinfo for logs regarding the failure to identify the remote ip on the cluster
 EOF
 exit 1
 fi
@@ -496,7 +501,7 @@ if  [[ "$JNB_TOKEN" == "" ]]; then
 cat <<EOF
 Error: token for the jupyter $JNB_START_OPTION session is not defined. Terminating script.
 * Please check login to the cluster and check with bjobs if the batch job on the cluster is running and terminate it with bkill.
-* Please check the /cluster/home/$JNB_USERNAME/jnbinfo for logs regarding the failure to identify the remote ip on the cluster
+* Please check the $HOME/jnbinfo for logs regarding the failure to identify the remote ip on the cluster
 EOF
 exit 1
 fi
