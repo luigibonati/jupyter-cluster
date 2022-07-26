@@ -107,6 +107,9 @@ JNB_JKERNEL="FALSE"
 # Extra cluster modules         : no additional modules
 JNB_EXTRA_MODULES=()
 
+# Use module collection         : no additional collection
+JNB_MODULE_USE=""
+
 ###############################################################################
 # Usage instructions                                                          #
 ###############################################################################
@@ -137,6 +140,7 @@ Optional arguments:
         -v | --version                         Display version of the script and exit
         -w | --workdir        WORKING_DIR      Working directory for the jupyter notebook/lab
              --extra-modules  EXTRA_MODULES    Load additional cluster modules before starting
+             --module-use     MODULE_USE       Use additional cluster module collection before starting
         -W | --runtime        RUN_TIME         Run time limit for jupyter notebook/lab in hours and minutes HH:MM
 
 Examples:
@@ -248,6 +252,11 @@ do
                 ;;
                 --extra-modules)
                 JNB_EXTRA_MODULES=( $2 )
+                shift
+                shift
+                ;;
+                --module-use)
+                JNB_MODULE_USE="$2"
                 shift
                 shift
                 ;;
@@ -453,6 +462,7 @@ ENDSSH
 echo -e "Connecting to $JNB_HOSTNAME to start jupyter $JNB_START_OPTION in a batch job"
 # FIXME: save jobid in a variable, that the script can kill the batch job at the end
 ssh $JNB_SSH_OPT bsub -n $JNB_NUM_CPU -W $JNB_RUN_TIME -R "rusage[mem=$JNB_MEM_PER_CPU_CORE]" $JNB_SNUM_GPU  <<ENDBSUB
+[ -n "$JNB_MODULE_USE" ] && module use "$JNB_MODULE_USE"
 module load $JNB_MODULE_COMMAND
 if [ "$JNB_ENV" != "" ]; then echo -e "Activating the $JNB_ENV"; source $JNB_ENV/bin/activate; fi
 export XDG_RUNTIME_DIR=
