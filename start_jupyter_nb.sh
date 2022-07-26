@@ -110,6 +110,9 @@ JNB_EXTRA_MODULES=()
 # Use module collection         : no additional collection
 JNB_MODULE_USE=""
 
+# Set the remote python path    : Leave untouched
+JNB_PYTHONPATH=""
+
 ###############################################################################
 # Usage instructions                                                          #
 ###############################################################################
@@ -141,6 +144,7 @@ Optional arguments:
         -w | --workdir        WORKING_DIR      Working directory for the jupyter notebook/lab
              --extra-modules  EXTRA_MODULES    Load additional cluster modules before starting
              --module-use     MODULE_USE       Use additional cluster module collection before starting
+             --pythonpath     PYTHONPATH       Set PYTHONPATH before starting
         -W | --runtime        RUN_TIME         Run time limit for jupyter notebook/lab in hours and minutes HH:MM
 
 Examples:
@@ -257,6 +261,11 @@ do
                 ;;
                 --module-use)
                 JNB_MODULE_USE="$2"
+                shift
+                shift
+                ;;
+                --pythonpath)
+                JNB_PYTHONPATH="$2"
                 shift
                 shift
                 ;;
@@ -470,6 +479,7 @@ JNB_IP_REMOTE="\$(hostname -i)"
 echo "Remote IP:\$JNB_IP_REMOTE" >> \$HOME/jnbip
 export JNB_RUN_TIME=$JNB_RUN_TIME
 export JNB_START_TIME=`date +"%Y-%m-%dT%H:%M:%S%z"`
+[ -n "$JNB_PYTHONPATH" ] && export PYTHONPATH="\$PYTHONPATH:$JNB_PYTHONPATH"
 jupyter $JNB_START_OPTION --no-browser --ip "\$JNB_IP_REMOTE" $JNB_SWORK_DIR &> \$HOME/jnbinfo
 ENDBSUB
 
