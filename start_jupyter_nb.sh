@@ -151,7 +151,7 @@ Examples:
 
         ./start_jupyter_nb.sh -u sfux -n 4 -W 04:00 -m 2048 -w /cluster/scratch/sfux
 
-        ./start_jupyter_nb.sh -u sfxu -n 1 -W 01:00 -m 1024 -j TRUE
+        ./start_jupyter_nb.sh -u sfux -n 1 -W 01:00 -m 1024 -j TRUE
 
         ./start_jupyter_nb.sh --username sfux --numcores 2 --runtime 01:30 --memory 2048 --softwarestack new
 
