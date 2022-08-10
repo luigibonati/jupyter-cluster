@@ -503,7 +503,7 @@ if  [[ "$JNB_REMOTE_IP" == "" ]]; then
 cat <<EOF
 Error: remote ip is not defined. Terminating script.
 * Please check login to the cluster and check with bjobs if the batch job on the cluster is running and terminate it with bkill.
-* Please check the $HOME/jnbinfo for logs regarding the failure to identify the remote ip on the cluster
+* Please check the /cluster/home/$JNB_USERNAME/jnbinfo on Euler for logs regarding the failure to identify the remote ip on the cluster
 EOF
 exit 1
 fi
@@ -512,7 +512,7 @@ if  [[ "$JNB_REMOTE_PORT" == "" ]]; then
 cat <<EOF
 Error: remote port is not defined. Terminating script.
 * Please check login to the cluster and check with bjobs if the batch job on the cluster is running and terminate it with bkill.
-* Please check the $HOME/jnbinfo for logs regarding the failure to identify the remote ip on the cluster
+* Please check the /cluster/home/$JNB_USERNAME/jnbinfo on Euler for logs regarding the failure to identify the remote ip on the cluster
 EOF
 exit 1
 fi
@@ -521,7 +521,7 @@ if  [[ "$JNB_TOKEN" == "" ]]; then
 cat <<EOF
 Error: token for the jupyter $JNB_START_OPTION session is not defined. Terminating script.
 * Please check login to the cluster and check with bjobs if the batch job on the cluster is running and terminate it with bkill.
-* Please check the $HOME/jnbinfo for logs regarding the failure to identify the remote ip on the cluster
+* Please check the /cluster/home/$JNB_USERNAME/jnbinfo on Euler for logs regarding the failure to identify the remote ip on the cluster
 EOF
 exit 1
 fi
