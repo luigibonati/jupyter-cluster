@@ -467,6 +467,16 @@ ENDSSH
 # Start jupyter notebook/lab on the cluster                                   #
 ###############################################################################
 
+CHECK_LSF_BINDIR=$(ssh $JNB_SSH_OPT "printenv|grep LSF" )
+if [ -n "$CHECK_LSF_BINDIR" ]
+then
+    BATCH_COMMAND="bsub"
+    MEMORY_REQUEST="-R "rusage[mem=$JNB_MEM_PER_CPU_CORE]""
+else
+    BATCH_COMMAND="sbatch --wrap"
+    MEMORY_REQUEST="--mem-per-cpu=$JNB_MEM_PER_CPU_CORE"
+fi
+
 # run the jupyter notebook/lab job on Euler and save ip, port and the token in the files jnbip and jninfo in the home directory of the user on Euler
 echo -e "Connecting to $JNB_HOSTNAME to start jupyter $JNB_START_OPTION in a batch job"
 # FIXME: save jobid in a variable, that the script can kill the batch job at the end
