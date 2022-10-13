@@ -104,7 +104,7 @@ JNB_JLAB=""
 # julia kernels                 : FALSE -> no julia kernel; TRUE -> julia kernel
 JNB_JKERNEL="FALSE"
 
-# Extra cluster modules         : no additional modules
+# Extra cluster modules         : no additional modules (or override defaults for gcc, python, ...)
 JNB_EXTRA_MODULES=()
 
 # Use module collection         : no additional collection
@@ -374,42 +374,67 @@ else
     echo -e "Setting waiting time interval for checking the start of the job to $JNB_WAITING_INTERVAL seconds"
 fi
 
-# check if JNB_JKERNEL is TRUE or FALSE and if the new software stack is used (julia kernel not supported with the old software stack)
-if [ "$JNB_JKERNEL" == "TRUE" ]; then
-        JNB_JULIA="julia/1.6.5"
-        if [ "$JNB_SOFTWARE_STACK" = "old" ]; then
-                echo -e "Error: The Julia kernel is only supported when using the new software stack. Please change the software stack and try again\n"
-                display_help
-        fi
-        echo -e "Enabling Julia kernel"
-elif [ "$JNB_JKERNEL" == "FALSE" ]; then
-        JNB_JULIA=""
-else
-        echo -e "Error: \$JNB_JKERNEL can only have the values TRUE or FALSE. Please specify a correct value for the -j/--julia parameter and try again\n"
-        display_help
-fi
+MODULES=()
+CORE_MODULE_DEFAULTS=()
 
 # check which software stack to use
 case $JNB_SOFTWARE_STACK in
-        old)
-        JNB_MODULE_COMMAND="new gcc/4.8.2 r/3.6.0 python/3.6.1 eth_proxy"
-        echo -e "Using old software stack (new gcc/4.8.2 r/3.6.0 python/3.6.1 eth_proxy)"
+    old)
+        MODULES+=( "new" )
+        CORE_MODULE_DEFAULTS+=( "gcc/4.8.2" "r/3.6.0" "python/3.6.1" )
         ;;
-        new)
+    new)
+        CORE_MODULE_DEFAULTS+=( "gcc/6.3.0" "r/4.0.2" )
         if [ "$JNB_NUM_GPU" -gt "0" ]; then
-            JNB_MODULE_COMMAND="gcc/6.3.0 r/4.0.2 python_gpu/3.8.5 eth_proxy $JNB_JULIA"
-            echo -e "Using new software stack (gcc/6.3.0 python_gpu/3.8.5 eth_proxy $JNB_JULIA)"
+            CORE_MODULE_DEFAULTS+=( "python_gpu/3.8.5" )
         else
-            JNB_MODULE_COMMAND="gcc/6.3.0 r/4.0.2 python/3.8.5 eth_proxy $JNB_JULIA"
-            echo -e "Using new software stack (gcc/6.3.0 python/3.8.5 eth_proxy $JNB_JULIA)"
-        fi  
+            CORE_MODULE_DEFAULTS+=( "python/3.8.5" )
+        fi
         ;;
-        *)
+    *)
         echo -e "Error: $JNB_SOFTWARE_STACK -> Unknown software stack. Software stack either needs to be set to 'new' or 'old'\n"
         display_help
         ;;
 esac
-JNB_MODULE_COMMAND+=" ${JNB_EXTRA_MODULES[@]}"
+
+# check if JNB_JKERNEL is TRUE or FALSE and if the new software stack is used (julia kernel not supported with the old software stack)
+if [ "$JNB_JKERNEL" == "TRUE" ]; then
+        if [ "$JNB_SOFTWARE_STACK" = "old" ]; then
+                echo -e "Error: The Julia kernel is only supported when using the new software stack. Please change the software stack and try again\n"
+                display_help
+        fi
+        CORE_MODULE_DEFAULTS+=( "julia/1.6.5" )
+        echo -e "Enabling Julia kernel"
+elif [ "$JNB_JKERNEL" != "FALSE" ]; then
+        echo -e "Error: \$JNB_JKERNEL can only have the values TRUE or FALSE. Please specify a correct value for the -j/--julia parameter and try again\n"
+        display_help
+fi
+
+function get_extra_module() {
+# Get module from JNB_EXTRA_MODULES defaulting to the given module
+    local module="$1"
+    for element in "${JNB_EXTRA_MODULES[@]}"; do
+        [[ $element == "${module%/*}"/* ]] && echo "$element" && return 0
+    done
+    echo "$module"
+}
+function is_core_module() {
+# Checks whether a module is in the core modules
+    local module="$1"
+    for element in "${CORE_MODULE_DEFAULTS[@]}"; do
+        [[ $element == "${module%/*}"/* ]] && return 0
+    done
+    return 1
+}
+
+for mod in "${CORE_MODULE_DEFAULTS[@]}" ; do
+    MODULES+=( "$(get_extra_module "$mod")" )
+done
+for mod in "eth_proxy" "${JNB_EXTRA_MODULES[@]}" ; do
+    is_core_module "$mod" || MODULES+=( "$mod" )
+done
+
+echo -e "Using ${JNB_SOFTWARE_STACK} software stack (${MODULES[@]})"
 
 # check if JNB_SSH_KEY_PATH is empty or contains a valid path
 if [ -z "$JNB_SSH_KEY_PATH" ]; then
@@ -472,7 +497,7 @@ echo -e "Connecting to $JNB_HOSTNAME to start jupyter $JNB_START_OPTION in a bat
 # FIXME: save jobid in a variable, that the script can kill the batch job at the end
 ssh $JNB_SSH_OPT bsub -n $JNB_NUM_CPU -W $JNB_RUN_TIME -R "rusage[mem=$JNB_MEM_PER_CPU_CORE]" $JNB_SNUM_GPU  <<ENDBSUB
 [ -n "$JNB_MODULE_USE" ] && module use "$JNB_MODULE_USE"
-module load $JNB_MODULE_COMMAND
+module load ${MODULES[@]}
 if [ "$JNB_ENV" != "" ]; then echo -e "Activating the $JNB_ENV"; source $JNB_ENV/bin/activate; fi
 export XDG_RUNTIME_DIR=
 JNB_IP_REMOTE="\$(hostname -i)"
