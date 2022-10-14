@@ -484,40 +484,73 @@ ENDSSH
 ###############################################################################
 # Start jupyter notebook/lab on the cluster                                   #
 ###############################################################################
-
+echo
+echo
+echo
 
 if [[ $JNB_BATCH = "LSF" ]]
 then
     JNB_BATCH_COMMAND="bsub"
     JNB_MEMORY_REQUEST="-R \"rusage[mem=$JNB_MEM_PER_CPU_CORE]\""
     JNB_SNUM_GPU="-R \"rusage[ngpus_excl_p=$JNB_NUM_GPU]\""
+
+    # run the jupyter notebook/lab job on Euler and save ip, port and the token in the files jnbip and jninfo in the home directory of the user on Euler
+    echo -e "Connecting to $JNB_HOSTNAME to start jupyter $JNB_START_OPTION in a LSF batch job"
+    # FIXME: save jobid in a variable, that the script can kill the batch job at the end
+
+
+    ssh $JNB_SSH_OPT $JNB_BATCH_COMMAND -n $JNB_NUM_CPU -W $JNB_RUN_TIME $JNB_MEMORY_REQUEST $JNB_SNUM_GPU  <<ENDBSUB
+        [ -n "$JNB_MODULE_USE" ] && module use "$JNB_MODULE_USE"
+        module load $JNB_MODULE_COMMAND
+        if [ "$JNB_ENV" != "" ]; then echo -e "Activating the $JNB_ENV"; source $JNB_ENV/bin/activate; fi
+        export XDG_RUNTIME_DIR=
+        JNB_IP_REMOTE="\$(hostname -i)"
+        echo "Remote IP:\$JNB_IP_REMOTE" >> \$HOME/jnbip
+        export JNB_RUN_TIME=$JNB_RUN_TIME
+        export JNB_START_TIME=`date +"%Y-%m-%dT%H:%M:%S%z"`
+        [ -n "$JNB_PYTHONPATH" ] && export PYTHONPATH="\$PYTHONPATH:$JNB_PYTHONPATH"
+        jupyter $JNB_START_OPTION --no-browser --ip "\$JNB_IP_REMOTE" $JNB_SWORK_DIR &> \$HOME/jnbinfo
+ENDBSUB
+
+
 elif [[ $JNB_BATCH = "SLURM" ]]
 then
-    JNB_BATCH_COMMAND="sbatch --wrap"
+
+    JNB_BATCH_COMMAND="sbatch"
     JNB_MEMORY_REQUEST="--mem-per-cpu=$JNB_MEM_PER_CPU_CORE"
-    JNB_SNUM_GPU="-G $JNB_NUM_GPU"
+    JNB_RUN_TIME="${JNB_RUN_TIME}":00" "
+
+    if [ $JNB_NUM_GPU -gt 0 ]
+    then
+        JNB_SNUM_GPU="-G $JNB_NUM_GPU"
+    else
+        JNB_SNUM_GPU=""
+    fi
+
+    # run the jupyter notebook/lab job on Euler and save ip, port and the token in the files jnbip and jninfo in the home directory of the user on Euler
+    echo -e "Connecting to $JNB_HOSTNAME to start jupyter $JNB_START_OPTION in a SLURM batch job"
+    # FIXME: save jobid in a variable, that the script can kill the batch job at the end
+    echo $JNB_MODULE_USE
+    ssh $JNB_SSH_OPT $JNB_BATCH_COMMAND -n $JNB_NUM_CPU --time=$JNB_RUN_TIME $JNB_MEMORY_REQUEST -e "error.dat" -o "output.dat" $JNB_SNUM_GPU  <<ENDBSUB
+#!/bin/bash
+[ -n "$JNB_MODULE_USE" ] && module use "$JNB_MODULE_USE"
+module load $JNB_MODULE_COMMAND
+if [ "$JNB_ENV" != "" ]; then echo -e "Activating the $JNB_ENV"; source $JNB_ENV/bin/activate; fi
+export XDG_RUNTIME_DIR=
+JNB_IP_REMOTE="\$(hostname -i)"
+echo $JNB_IP_REMOTE
+echo "Remote IP:\$JNB_IP_REMOTE" >> \$HOME/jnbip
+export JNB_RUN_TIME=$JNB_RUN_TIME
+export JNB_START_TIME=`date +"%Y-%m-%dT%H:%M:%S%z"`
+[ -n "$JNB_PYTHONPATH" ] && export PYTHONPATH="\$PYTHONPATH:$JNB_PYTHONPATH"
+jupyter $JNB_START_OPTION --no-browser --ip "\$JNB_IP_REMOTE" $JNB_SWORK_DIR &> \$HOME/jnbinfo
+ENDBSUB
+
+
 fi
 
-# run the jupyter notebook/lab job on Euler and save ip, port and the token in the files jnbip and jninfo in the home directory of the user on Euler
-echo -e "Connecting to $JNB_HOSTNAME to start jupyter $JNB_START_OPTION in a batch job"
-# FIXME: save jobid in a variable, that the script can kill the batch job at the end
-
 echo
-echo "ssh $JNB_SSH_OPT $JNB_BATCH_COMMAND -n $JNB_NUM_CPU -W $JNB_RUN_TIME $JNB_MEMORY_REQUEST $JNB_SNUM_GPU "
 echo
-
-ssh $JNB_SSH_OPT $JNB_BATCH_COMMAND -n $JNB_NUM_CPU -W $JNB_RUN_TIME $JNB_MEMORY_REQUEST $JNB_SNUM_GPU  <<ENDBSUB
-[" -n "$JNB_MODULE_USE" ] && module use "$JNB_MODULE_USE" ;
-module load $JNB_MODULE_COMMAND;
-if [ "$JNB_ENV" != "" ]; then echo -e "Activating the $JNB_ENV"; source $JNB_ENV/bin/activate; fi ;
-export XDG_RUNTIME_DIR= ;
-JNB_IP_REMOTE="\$(hostname -i)" ;
-echo "Remote IP:\$JNB_IP_REMOTE" >> \$HOME/jnbip ;
-export JNB_RUN_TIME=$JNB_RUN_TIME ;
-export JNB_START_TIME=`date +"%Y-%m-%dT%H:%M:%S%z"` ;
-[ -n "$JNB_PYTHONPATH" ] && export PYTHONPATH="\$PYTHONPATH:$JNB_PYTHONPATH" ;
-jupyter $JNB_START_OPTION --no-browser --ip "\$JNB_IP_REMOTE" $JNB_SWORK_DIR &> \$HOME/jnbinfo " 
-ENDBSUB
 
 # wait until jupyter notebook/lab has started, poll every $JNB_WAITING_INTERVAL seconds to check if $HOME/jnbinfo exists
 # once the file exists and is not empty, the notebook/lab has been startet and is listening
