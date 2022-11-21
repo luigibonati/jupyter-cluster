@@ -10,7 +10,6 @@
 #                   Gül Sena Altıntaş, Mikolaj Rybinski, Gerhard Bräunlich    #
 #  Date           : December 2018                                             #
 #  Location       : ETH Zurich                                                #
-#  Version        : 1.0                                                       #
 #  Change history :                                                           #
 #                                                                             #
 #  19.07.2022    Add option --extra-modules                                   #
@@ -52,7 +51,7 @@
 ###############################################################################
 
 # Version
-JNB_VERSION="1.2"
+JNB_VERSION="1.3"
 
 # Script directory
 JNB_SCRIPTDIR=$(pwd)
@@ -113,6 +112,9 @@ JNB_MODULE_USE=""
 # Set the remote python path    : Leave untouched
 JNB_PYTHONPATH=""
 
+# batch system to be used       : Options are LSF and SLURM
+JNB_BATCH="SLURM"
+
 ###############################################################################
 # Usage instructions                                                          #
 ###############################################################################
@@ -129,8 +131,8 @@ Required options:
 
 Optional arguments:
 
+        -b | --batch_sys      BATCHSYS         Batch system to use (LSF or SLURM)
         -c | --config         CONFIG_FILE      Configuration file for specifying options
-        -e | --environment    ENV              Python virtual environment
         -g | --numgpu         NUM_GPU          Number of GPUs to be used on the cluster
         -h | --help                            Display help for this script and quit
         -i | --interval       INTERVAL         Time interval for checking if the job on the cluster already started
@@ -149,17 +151,19 @@ Optional arguments:
 
 Examples:
 
-        ./start_jupyter_nb.sh -u sfux -n 4 -W 04:00 -m 2048 -w /cluster/scratch/sfux
+        ./start_jupyter_nb.sh -u sfux -b SLURM -n 4 -W 04:00 -m 2048 -w /cluster/scratch/sfux
 
-        ./start_jupyter_nb.sh -u sfux -n 1 -W 01:00 -m 1024 -j TRUE
+        ./start_jupyter_nb.sh -u sfux -b SLURM -n 1 -W 01:00 -m 1024 -j TRUE
 
-        ./start_jupyter_nb.sh --username sfux --numcores 2 --runtime 01:30 --memory 2048 --softwarestack new
+        ./start_jupyter_nb.sh --username sfux --batch_sys SLURM --numcores 2 --runtime 01:30 --memory 2048 --softwarestack new
 
         ./start_jupyter_nb.sh -c $HOME/.jnb_config
 
 Format of configuration file:
 
 JNB_USERNAME=""             # ETH username for SSH connection to Euler
+JNB_BATCH="SLURM"           # Choose SLURM or LSF as batch system
+JNB_EXTRA_MODULES           # Additional modules to be loaded
 JNB_NUM_CPU=1               # Number of CPU cores to be used on the cluster
 JNB_NUM_GPU=0               # Number of GPUs to be used on the cluster
 JNB_RUN_TIME="01:00"        # Run time limit for jupyter notebook/lab in hours and minutes HH:MM
@@ -215,8 +219,8 @@ do
                 shift
                 shift
                 ;;
-                -e |--environment)
-                JNB_ENV=$2
+                -b |--batch_sys)
+                JNB_BATCH=$2
                 shift
                 shift
                 ;;
@@ -306,6 +310,20 @@ else
         JNB_START_OPTION="notebook"
 fi
 
+# check which batch system to use
+case $JNB_BATCH in
+        LSF)
+        echo -e "Using LSF batch system"
+        ;;
+        SLURM)
+        echo -e "Using Slurm batch system"
+        ;;
+        *)
+        echo -e "Error: Unknown batch system $JNB_BATCH_SYSTEM. Please either specify LSF or SLURM as batch system"
+        display_help
+        ;;
+esac
+
 # check number of CPU cores
 
 # check if JNB_NUM_CPU an integer
@@ -340,7 +358,11 @@ fi
 
 if [ "$JNB_NUM_GPU" -gt "0" ]; then
         echo -e "Requesting $JNB_NUM_GPU GPUs for running the jupyter $JNB_START_OPTION"
-        JNB_SNUM_GPU="-R \"rusage[ngpus_excl_p=$JNB_NUM_GPU]\""
+        if [ "$JNB_BATCH" == "LSF" ]; then
+                JNB_SNUM_GPU="-R \"rusage[ngpus_excl_p=$JNB_NUM_GPU]\""
+        else
+                JNB_SNUM_GPU="--gpus=$JNB_NUM_GPU"
+        fi
 else
         JNB_SNUM_GPU=""
 fi
@@ -374,67 +396,44 @@ else
     echo -e "Setting waiting time interval for checking the start of the job to $JNB_WAITING_INTERVAL seconds"
 fi
 
-MODULES=()
-CORE_MODULE_DEFAULTS=()
-
-# check which software stack to use
-case $JNB_SOFTWARE_STACK in
-    old)
-        MODULES+=( "new" )
-        CORE_MODULE_DEFAULTS+=( "gcc/4.8.2" "r/3.6.0" "python/3.6.1" )
-        ;;
-    new)
-        CORE_MODULE_DEFAULTS+=( "gcc/6.3.0" "r/4.0.2" )
-        if [ "$JNB_NUM_GPU" -gt "0" ]; then
-            CORE_MODULE_DEFAULTS+=( "python_gpu/3.8.5" )
-        else
-            CORE_MODULE_DEFAULTS+=( "python/3.8.5" )
-        fi
-        ;;
-    *)
-        echo -e "Error: $JNB_SOFTWARE_STACK -> Unknown software stack. Software stack either needs to be set to 'new' or 'old'\n"
-        display_help
-        ;;
-esac
-
 # check if JNB_JKERNEL is TRUE or FALSE and if the new software stack is used (julia kernel not supported with the old software stack)
 if [ "$JNB_JKERNEL" == "TRUE" ]; then
+        JNB_JULIA="julia/1.6.5"
         if [ "$JNB_SOFTWARE_STACK" = "old" ]; then
                 echo -e "Error: The Julia kernel is only supported when using the new software stack. Please change the software stack and try again\n"
                 display_help
         fi
-        CORE_MODULE_DEFAULTS+=( "julia/1.6.5" )
         echo -e "Enabling Julia kernel"
-elif [ "$JNB_JKERNEL" != "FALSE" ]; then
+elif [ "$JNB_JKERNEL" == "FALSE" ]; then
+        JNB_JULIA=""
+else
         echo -e "Error: \$JNB_JKERNEL can only have the values TRUE or FALSE. Please specify a correct value for the -j/--julia parameter and try again\n"
         display_help
 fi
 
-function get_extra_module() {
-# Get module from JNB_EXTRA_MODULES defaulting to the given module
-    local module="$1"
-    for element in "${JNB_EXTRA_MODULES[@]}"; do
-        [[ $element == "${module%/*}"/* ]] && echo "$element" && return 0
-    done
-    echo "$module"
-}
-function is_core_module() {
-# Checks whether a module is in the core modules
-    local module="$1"
-    for element in "${CORE_MODULE_DEFAULTS[@]}"; do
-        [[ $element == "${module%/*}"/* ]] && return 0
-    done
-    return 1
-}
-
-for mod in "${CORE_MODULE_DEFAULTS[@]}" ; do
-    MODULES+=( "$(get_extra_module "$mod")" )
-done
-for mod in "eth_proxy" "${JNB_EXTRA_MODULES[@]}" ; do
-    is_core_module "$mod" || MODULES+=( "$mod" )
-done
-
-echo -e "Using ${JNB_SOFTWARE_STACK} software stack (${MODULES[@]})"
+# check which software stack to use
+case $JNB_SOFTWARE_STACK in
+        old)
+        JNB_MODULE_COMMAND="new gcc/4.8.2 r/3.6.0 python/3.6.1 eth_proxy"
+        JNB_MODULE_COMMAND+=" ${JNB_EXTRA_MODULES[@]}"
+        echo -e "Using old software stack (new gcc/4.8.2 r/3.6.0 python/3.6.1 eth_proxy ${JNB_EXTRA_MODULES[@]})"
+        ;;
+        new)
+        if [ "$JNB_NUM_GPU" -gt "0" ]; then
+            JNB_MODULE_COMMAND="gcc/6.3.0 r/4.0.2 python_gpu/3.8.5 eth_proxy $JNB_JULIA"
+            JNB_MODULE_COMMAND+=" ${JNB_EXTRA_MODULES[@]}"
+            echo -e "Using new software stack (gcc/6.3.0 python_gpu/3.8.5 r/4.0.2 eth_proxy $JNB_JULIA ${JNB_EXTRA_MODULES[@]})"
+        else
+            JNB_MODULE_COMMAND="gcc/6.3.0 r/4.0.2 python/3.8.5 eth_proxy $JNB_JULIA"
+            JNB_MODULE_COMMAND+=" ${JNB_EXTRA_MODULES[@]}"
+            echo -e "Using new software stack (gcc/6.3.0 python/3.8.5 r/4.0.2 eth_proxy $JNB_JULIA ${JNB_EXTRA_MODULES[@]})"
+        fi  
+        ;;
+        *)
+        echo -e "Error: $JNB_SOFTWARE_STACK -> Unknown software stack. Software stack either needs to be set to 'new' or 'old'\n"
+        display_help
+        ;;
+esac
 
 # check if JNB_SSH_KEY_PATH is empty or contains a valid path
 if [ -z "$JNB_SSH_KEY_PATH" ]; then
@@ -452,17 +451,13 @@ else
         echo -e "Using $JNB_WORKING_DIR as working directory"
 fi
 
-# check if JNB_ENV is empty
-if [ "$JNB_ENV" != "" ]; then
-        echo "Using $JNB_ENV as python environment"
-fi
-
 # put together string for SSH options
 if [ -z "$JNB_USERNAME" ]; then
     JNB_SSH_OPT="$JNB_SKPATH $JNB_HOSTNAME"
 else
     JNB_SSH_OPT="$JNB_SKPATH $JNB_USERNAME@$JNB_HOSTNAME"
 fi
+
 ###############################################################################
 # Check for leftover files                                                    #
 ###############################################################################
@@ -495,10 +490,12 @@ ENDSSH
 # run the jupyter notebook/lab job on Euler and save ip, port and the token in the files jnbip and jninfo in the home directory of the user on Euler
 echo -e "Connecting to $JNB_HOSTNAME to start jupyter $JNB_START_OPTION in a batch job"
 # FIXME: save jobid in a variable, that the script can kill the batch job at the end
+
+if [ "$JNB_BATCH" == "LSF" ]
+then
 ssh $JNB_SSH_OPT bsub -n $JNB_NUM_CPU -W $JNB_RUN_TIME -R "rusage[mem=$JNB_MEM_PER_CPU_CORE]" $JNB_SNUM_GPU  <<ENDBSUB
 [ -n "$JNB_MODULE_USE" ] && module use "$JNB_MODULE_USE"
-module load ${MODULES[@]}
-if [ "$JNB_ENV" != "" ]; then echo -e "Activating the $JNB_ENV"; source $JNB_ENV/bin/activate; fi
+module load $JNB_MODULE_COMMAND
 export XDG_RUNTIME_DIR=
 JNB_IP_REMOTE="\$(hostname -i)"
 echo "Remote IP:\$JNB_IP_REMOTE" >> \$HOME/jnbip
@@ -507,6 +504,21 @@ export JNB_START_TIME=`date +"%Y-%m-%dT%H:%M:%S%z"`
 [ -n "$JNB_PYTHONPATH" ] && export PYTHONPATH="\$PYTHONPATH:$JNB_PYTHONPATH"
 jupyter $JNB_START_OPTION --no-browser --ip "\$JNB_IP_REMOTE" $JNB_SWORK_DIR &> \$HOME/jnbinfo
 ENDBSUB
+elif [ "$JNB_BATCH" == "SLURM" ]
+then
+ssh $JNB_SSH_OPT sbatch -n $JNB_NUM_CPU --time=${JNB_RUN_TIME}:00 $JNB_SNUM_GPU <<ENDSBATCH
+#!/bin/bash
+[ -n "$JNB_MODULE_USE" ] && module use "$JNB_MODULE_USE"
+module load $JNB_MODULE_COMMAND
+export XDG_RUNTIME_DIR=
+JNB_IP_REMOTE="\$(hostname -i)"
+echo "Remote IP:\$JNB_IP_REMOTE" >> \$HOME/jnbip
+export JNB_RUN_TIME=$JNB_RUN_TIME
+export JNB_START_TIME=`date +"%Y-%m-%dT%H:%M:%S%z"`
+[ -n "$JNB_PYTHONPATH" ] && export PYTHONPATH="\$PYTHONPATH:$JNB_PYTHONPATH"
+jupyter $JNB_START_OPTION --no-browser --ip "\$JNB_IP_REMOTE" $JNB_SWORK_DIR &> \$HOME/jnbinfo
+ENDSBATCH
+fi
 
 # wait until jupyter notebook/lab has started, poll every $JNB_WAITING_INTERVAL seconds to check if $HOME/jnbinfo exists
 # once the file exists and is not empty, the notebook/lab has been startet and is listening
@@ -589,6 +601,9 @@ EOF
 # FIXME: check if the tunnel can be managed via this script (opening, closing) by using a control socket from SSH
 echo -e "Setting up SSH tunnel for connecting the browser to the jupyter $JNB_START_OPTION"
 ssh $JNB_SSH_OPT -L $JNB_LOCAL_PORT:$JNB_REMOTE_IP:$JNB_REMOTE_PORT -N &
+
+# store pid of the SSH tunnel to terminate it after the session is over
+JNB_SSH_TUNNEL_PID=$!
 
 # SSH tunnel is started in the background, pause 5 seconds to make sure
 # it is established before starting the browser
