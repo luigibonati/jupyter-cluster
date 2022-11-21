@@ -90,8 +90,8 @@ Required options:
 
 Optional arguments:
 
+        -b | --batch_sys      BATCHSYS         Batch system to use (LSF or SLURM)
         -c | --config         CONFIG_FILE      Configuration file for specifying options
-        -e | --environment    ENV              Python virtual environment
         -g | --numgpu         NUM_GPU          Number of GPUs to be used on the cluster
         -h | --help                            Display help for this script and quit
         -i | --interval       INTERVAL         Time interval for checking if the job on the cluster already started
@@ -103,21 +103,26 @@ Optional arguments:
         -s | --softwarestack  SOFTWARE_STACK   Software stack to be used (old, new)
         -v | --version                         Display version of the script and exit
         -w | --workdir        WORKING_DIR      Working directory for the jupyter notebook/lab
+             --extra-modules  EXTRA_MODULES    Load additional cluster modules before starting
+             --module-use     MODULE_USE       Use additional cluster module collection before starting
+             --pythonpath     PYTHONPATH       Set PYTHONPATH before starting
         -W | --runtime        RUN_TIME         Run time limit for jupyter notebook/lab in hours and minutes HH:MM
 
 Examples:
 
-        ./start_jupyter_nb.sh -u sfux -n 4 -W 04:00 -m 2048 -w /cluster/scratch/sfux
+        ./start_jupyter_nb.sh -u sfux -b SLURM -n 4 -W 04:00 -m 2048 -w /cluster/scratch/sfux
 
-        ./start_jupyter_nb.sh -u sfxu -n 1 -W 01:00 -m 1024 -j TRUE
+        ./start_jupyter_nb.sh -u sfux -b SLURM -n 1 -W 01:00 -m 1024 -j TRUE
 
-        ./start_jupyter_nb.sh --username sfux --numcores 2 --runtime 01:30 --memory 2048 --softwarestack new
+        ./start_jupyter_nb.sh --username sfux --batch_sys SLURM --numcores 2 --runtime 01:30 --memory 2048 --softwarestack new
 
         ./start_jupyter_nb.sh -c /c/Users/sfux/.jnb_config
 
 Format of configuration file:
 
 JNB_USERNAME=""             # ETH username for SSH connection to Euler
+JNB_BATCH="SLURM"           # Choose SLURM or LSF as batch system
+JNB_EXTRA_MODULES           # Additional modules to be loaded
 JNB_NUM_CPU=1               # Number of CPU cores to be used on the cluster
 JNB_NUM_GPU=0               # Number of GPUs to be used on the cluster
 JNB_RUN_TIME="01:00"        # Run time limit for jupyter notebook/lab in hours and minutes HH:MM
@@ -129,7 +134,6 @@ JNB_WORKING_DIR=""          # Working directory for jupyter notebook/lab
 JNB_ENV=""                  # Path to virtual environment
 JNB_JLAB=""                 # "lab" -> start jupyter lab; "" -> start jupyter notebook
 JNB_JKERNEL="FALSE"         # "FALSE" -> no Julia kernel; "TRUE" -> Julia kernel
-
 
 ```
 
@@ -191,15 +195,6 @@ Then follow the instructions provided on our wiki:
 ```
 https://scicomp.ethz.ch/wiki/R#Extensions
 ```
-
-### Running with a Python Virtual Environment
-
-You can create your own [virtual environment](https://scicomp.ethz.ch/wiki/Python_virtual_environment) in the cluster and run your jupyter notebook with that environment. Please make sure that the Python version used to create your virtual environment is compatible with the one used in the jupyter script. 
-
-```
-./start_jupyter_nb.sh -u sfux -n 4 -W 04:00 -m 2048 -w /cluster/scratch/sfux -e sample_env
-```
-
 
 ## Main author
 * Samuel Fux
