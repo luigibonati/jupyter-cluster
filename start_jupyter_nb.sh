@@ -7,12 +7,15 @@
 #  Main author    : Samuel Fux                                                #
 #  Contributions  : Jarunan Panyasantisuk, Andrei Plamada, Swen Vermeul,      #
 #                   Urban Borsnik, Steven Armstrong, Henry Lütcke,            #
-#                   Gül Sena Altıntaş, Mikolaj Rybinski, Gerhard Bräunlich    #
-#  Date           : December 2018                                             #
+#                   Gül Sena Altıntaş, Mikolaj Rybinski, Gerhard Bräunlich,   #
+#                   Nadejda Marounina                                         #
+#  Date           : 2018-2022                                                 #
 #  Location       : ETH Zurich                                                #
 #  Change history :                                                           #
 #                                                                             #
-#  19.07.2022    Add option --extra-modules                                   #
+#  21.11.2022    Added Slurm support                                          #
+#                                                                             # 
+#  19.07.2022    Added option --extra-modules                                 #
 #                                                                             #
 #  14.02.2022    Adding option -j for julia kernel to the script              #
 #                                                                             #
@@ -506,7 +509,7 @@ jupyter $JNB_START_OPTION --no-browser --ip "\$JNB_IP_REMOTE" $JNB_SWORK_DIR &> 
 ENDBSUB
 elif [ "$JNB_BATCH" == "SLURM" ]
 then
-ssh $JNB_SSH_OPT sbatch -n $JNB_NUM_CPU --time=${JNB_RUN_TIME}:00 $JNB_SNUM_GPU <<ENDSBATCH
+ssh $JNB_SSH_OPT sbatch --ntasks=1 --cpus-per-task=$JNB_NUM_CPU --time=${JNB_RUN_TIME}:00 $JNB_SNUM_GPU <<ENDSBATCH
 #!/bin/bash
 [ -n "$JNB_MODULE_USE" ] && module use "$JNB_MODULE_USE"
 module load $JNB_MODULE_COMMAND
