@@ -54,7 +54,7 @@
 ###############################################################################
 
 # Version
-JNB_VERSION="1.3"
+JNB_VERSION="1.4"
 
 # Script directory
 JNB_SCRIPTDIR=$(pwd)
