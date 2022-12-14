@@ -509,7 +509,7 @@ jupyter $JNB_START_OPTION --no-browser --ip "\$JNB_IP_REMOTE" $JNB_SWORK_DIR &> 
 ENDBSUB
 elif [ "$JNB_BATCH" == "SLURM" ]
 then
-ssh $JNB_SSH_OPT sbatch --ntasks=1 --cpus-per-task=$JNB_NUM_CPU --time=${JNB_RUN_TIME}:00 $JNB_SNUM_GPU <<ENDSBATCH
+ssh $JNB_SSH_OPT sbatch --ntasks=1 --cpus-per-task=$JNB_NUM_CPU --time=${JNB_RUN_TIME}:00 --mem-per-cpu=$JNB_MEM_PER_CPU_CORE $JNB_SNUM_GPU <<ENDSBATCH
 #!/bin/bash
 [ -n "$JNB_MODULE_USE" ] && module use "$JNB_MODULE_USE"
 module load $JNB_MODULE_COMMAND
