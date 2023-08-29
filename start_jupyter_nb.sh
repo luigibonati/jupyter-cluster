@@ -175,7 +175,6 @@ JNB_WAITING_INTERVAL=60     # Time interval to check if the job on the cluster a
 JNB_SSH_KEY_PATH=""         # Path to SSH key with non-standard name
 JNB_SOFTWARE_STACK="new"    # Software stack to be used (old, new)
 JNB_WORKING_DIR=""          # Working directory for jupyter notebook/lab
-JNB_ENV=""                  # Path to virtual environment
 JNB_JLAB=""                 # "lab" -> start jupyter lab; "" -> start jupyter notebook
 JNB_JKERNEL="FALSE"         # "FALSE" -> no Julia kernel; "TRUE" -> Julia kernel
 
