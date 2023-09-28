@@ -1,9 +1,19 @@
-# Jupyter on Euler
+# Jupyter on Cluster
+
+## Description
+
+Modified version of the [Jupyter on Euler](https://gitlab.ethz.ch/sfux/Jupyter-on-Euler-or-Leonhard-Open) script developed to connect to a Jupyter notebook running on the ETH Euler cluster.  
+
+Adapted to work with a generic cluster extending the support to the PBS queue system (see detailed changelog in python file).
+
+The original README is appended below (note that some of the instructions are specific to the ETH Euler cluster).
+
+### Jupyter on Euler
 This project aims to help beginner users to run simple jupyter notebooks on our HPC cluster Euler. It is not addressing advanced users that need a wide range of additional features going beyond simple jupyter notebooks.
 
 When you run this shell script on your local computer, then it starts a Jupyter notebook in a batch job on Euler and connects your local browser with it.
 
-## Requirements
+### Requirements
 
 The script assumes that you have setup SSH keys for passwordless access to the cluster. Please find some instructions on how to create SSH keys on the scicomp wiki:
 
@@ -23,10 +33,10 @@ Ubuntu:
 apt-get install xdg-utils
 ```
 
-## Security token vs. password setup
+### Security token vs. password setup
 Please note that a part of the script (parsing of the ports) requires that you use jupyter notebooks with the security tokens. If you configure a password instead, such that you can use the jupyter notebook without the security token, then the script will not work anymore (it cannot parse the port on the remote compute node) without adapting it.
 
-## Using SSH keys with non-default names
+### Using SSH keys with non-default names
 Since the reopening of Euler after the cyber attack in May 2020, we recommend to the cluster users to use SSH keys.
 ```
 $HOME/.ssh/id_ed25519_euler
@@ -38,9 +48,9 @@ https://scicomp.ethz.ch/wiki/Accessing_the_clusters#How_to_use_keys_with_non-def
 
 I would recommend to use the SSH config file as this works more reliably.
 
-## Usage
+### Usage
 
-### Install
+#### Install
 
 Download the repository with the commnad
 
@@ -61,7 +71,7 @@ cd Jupyter-on-Euler-or-Leonhard-Open/
 chmod 755 start_jupyter_nb.sh
 ```
 
-### Software stack
+#### Software stack
 Please note that currently the old software stack is still set a default (this will change). The script is using the new software stack (unless you explicitly request the old software stack with the option -s old (or --softwarestack old). Therefore please make sure that you set the new software stack as permanent default by using the command
 
 ```
@@ -74,7 +84,7 @@ You can find more information about this script on our wiki:
 https://scicomp.ethz.ch/wiki/Setting_permanent_default_for_software_stack_upon_login
 ```
 
-### Run Jupyter in a batch job
+#### Run Jupyter in a batch job
 
 The start_jupyer_nb.sh script needs to be executed on your local computer. Please find below the list of options that can be used with the script:
 
@@ -137,17 +147,17 @@ JNB_JKERNEL="FALSE"         # "FALSE" -> no Julia kernel; "TRUE" -> Julia kernel
 
 ```
 
-### Reconnect to a Jupyter notebook
+#### Reconnect to a Jupyter notebook
 When running the script, it creates a local file called reconnect_info in the installation directory, which contains all information regarding the used ports, the remote ip address, the command for the SSH tunnel and the URL for the browser. This information should be sufficient to reconnect to a Jupyter notebook if connection was lost.
 
-### Running multiple notebooks in a single Jupyter instance
+#### Running multiple notebooks in a single Jupyter instance
 If you run Jupyter on the Leonhard cluster, using GPUs, then you need to make sure a notebook is correctly terminated before you can start another one.
 
 If you don't properly close the first notebook and run a second one, then the previous notebook will still occupy some GPU memory and have processes running, which will throw some errors, when executing the second notebook.
 
 Therefore please make sure that you stop running kernels in the "running" tab in the browser, before starting a new notebook.
 
-### Terminate the Jupyter session
+#### Terminate the Jupyter session
 
 Please note that when you finish working with the jupyter notebook, you need to click on the "Quit" or "Logout" button in your Browser. "Quit" will stop the batch job running on Euler, "Logout" will just log you out from the session but not stop the batch job (in this case you need to login to the cluster, identify the job with bjobs and then kill it with the bkill command, using the jobid as parameter). Afterwards you also need to clean up the SSH tunnel that is running in the background. Example:
 
@@ -157,11 +167,11 @@ samfux    8729  0.0  0.0  59404  6636 pts/5    S    13:46   0:00 ssh sfux@euler.
 samfux@bullvalene:~/jupyter-on-Euler-or-Leonhard-Open$ kill 8729
 ```
 
-### Additional kernels
+#### Additional kernels
 
 When using this script, you can either use the Python 3.6 Kernel, or in addition a bash kernel or an R kernel (3.6.0 on Euler, 3.5.1 on Leonhard Open)
 
-### Installing additional Python and R packages locally
+#### Installing additional Python and R packages locally
 
 When starting a Jupyter notebook with this script, then it will use a central Python and R installation:
 
@@ -196,10 +206,10 @@ Then follow the instructions provided on our wiki:
 https://scicomp.ethz.ch/wiki/R#Extensions
 ```
 
-## Main author
+### Main author
 * Samuel Fux
 
-## Contributions
+### Contributions
 * Andrei Plamada
 * Urban Borstnik
 * Steven Armstrong
@@ -207,3 +217,4 @@ https://scicomp.ethz.ch/wiki/R#Extensions
 * Jarunan Panyasantisuk
 * Gül Sena Altıntaş
 * Mikolaj Rybinski
+
