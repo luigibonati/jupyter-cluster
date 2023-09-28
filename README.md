@@ -1,14 +1,14 @@
 # Jupyter on Cluster
 
-## Description
+Modified version of the [Jupyter on Euler](https://gitlab.ethz.ch/sfux/Jupyter-on-Euler-or-Leonhard-Open) script to connect to a Jupyter notebook running on an HPC cluster.  
 
-Modified version of the [Jupyter on Euler](https://gitlab.ethz.ch/sfux/Jupyter-on-Euler-or-Leonhard-Open) script developed to connect to a Jupyter notebook running on the ETH Euler cluster.  
+Adapted to work with a generic cluster and to support the PBS queue system (see detailed changelog in python file).
 
-Adapted to work with a generic cluster extending the support to the PBS queue system (see detailed changelog in python file).
+The original Jupyter on Euler is appended below (note that some of the instructions are specific to the ETH Euler cluster).
 
-The original README is appended below (note that some of the instructions are specific to the ETH Euler cluster).
+--- 
 
-### Jupyter on Euler
+### _Original README_
 This project aims to help beginner users to run simple jupyter notebooks on our HPC cluster Euler. It is not addressing advanced users that need a wide range of additional features going beyond simple jupyter notebooks.
 
 When you run this shell script on your local computer, then it starts a Jupyter notebook in a batch job on Euler and connects your local browser with it.
