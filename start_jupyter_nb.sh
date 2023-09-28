@@ -2,16 +2,24 @@
 
 ###############################################################################
 #                                                                             #
-#  Script to start a jupyter notebook/lab on Euler from a local computer      #
+#  Script to start a jupyter notebook/lab on a cluster from a local computer  #
+#                                                                             #
+#  Adapted by Luigi Bonati from:                                              #
+#  https://gitlab.ethz.ch/sfux/Jupyter-on-Euler-or-Leonhard-Open              #
+#                                                                             #
+#  28.09.2023     Added PBS support                                           #
+#                 Added --cluster option to specify cluster address           #
+#                                                                             #
+#  =========================================================================  #
+#                                                                             #
+#  original changelog :                                                       #
 #                                                                             #
 #  Main author    : Samuel Fux                                                #
-#  Contributions  : Jarunan Panyasantisuk, Andrei Plamada, Swen Vermeul,      #
-#                   Urban Borsnik, Steven Armstrong, Henry Lütcke,            #
-#                   Gül Sena Altıntaş, Mikolaj Rybinski, Gerhard Bräunlich,   #
-#                   Nadejda Marounina                                         #
 #  Date           : 2018-2022                                                 #
 #  Location       : ETH Zurich                                                #
 #  Change history :                                                           #
+#                                                                             #
+#  =========================================================================  #
 #                                                                             #
 #  21.11.2022    Added Slurm support                                          #
 #                                                                             # 
@@ -59,13 +67,13 @@ JNB_VERSION="1.4"
 # Script directory
 JNB_SCRIPTDIR=$(pwd)
 
-# hostname of the cluster to connect to
-JNB_HOSTNAME="euler.ethz.ch"
-
 # order for initializing configuration options
 # 1. Defaults values set inside this script
 # 2. Command line options overwrite defaults
 # 3. Config file options  overwrite command line options
+
+# hostname of the cluster to connect to
+JNB_HOSTNAME="fe02.franklin.iit.local"
 
 # Configuration file default    : $HOME/.jnb_config
 JNB_CONFIG_FILE="$HOME/.jnb_config"
@@ -80,7 +88,7 @@ JNB_NUM_CPU=1
 JNB_RUN_TIME="01:00"
 
 # Memory default                : 1024 MB per core
-JNB_MEM_PER_CPU_CORE=1024
+JNB_MEM_PER_CPU_CORE=0
 
 # Number of GPUs default        : 0 GPUs
 JNB_NUM_GPU=0
@@ -90,9 +98,6 @@ JNB_WAITING_INTERVAL=60
 
 # SSH key location default      : no default
 JNB_SSH_KEY_PATH=""
-
-# Software stack default        : new
-JNB_SOFTWARE_STACK="new"
 
 # Workdir default               : no default
 JNB_WORKING_DIR=""
@@ -116,7 +121,7 @@ JNB_MODULE_USE=""
 JNB_PYTHONPATH=""
 
 # batch system to be used       : Options are LSF and SLURM
-JNB_BATCH="SLURM"
+JNB_BATCH="PBS"
 
 ###############################################################################
 # Usage instructions                                                          #
@@ -130,11 +135,11 @@ Usage: start_jupyter_nb.sh [options]
 
 Required options:
 
-        -u | --username       USERNAME         ETH username for SSH connection to Euler
+        -u | --username       USERNAME         cluster username for SSH connection to Euler
 
 Optional arguments:
 
-        -b | --batch_sys      BATCHSYS         Batch system to use (LSF or SLURM)
+        -b | --batch_sys      BATCHSYS         Batch system to use (LSF or SLURM or QSUB)
         -c | --config         CONFIG_FILE      Configuration file for specifying options
         -g | --numgpu         NUM_GPU          Number of GPUs to be used on the cluster
         -h | --help                            Display help for this script and quit
@@ -144,7 +149,6 @@ Optional arguments:
         -l | --lab                             Start jupyter lab instead of a jupyter notebook
         -m | --memory         MEM_PER_CORE     Memory limit in MB per core
         -n | --numcores       NUM_CPU          Number of CPU cores to be used on the cluster
-        -s | --softwarestack  SOFTWARE_STACK   Software stack to be used (old, new)
         -v | --version                         Display version of the script and exit
         -w | --workdir        WORKING_DIR      Working directory for the jupyter notebook/lab
              --extra-modules  EXTRA_MODULES    Load additional cluster modules before starting
@@ -154,18 +158,19 @@ Optional arguments:
 
 Examples:
 
-        ./start_jupyter_nb.sh -u sfux -b SLURM -n 4 -W 04:00 -m 2048 -w /cluster/scratch/sfux
+        ./start_jupyter_nb.sh -u lbonati -b PBS -n 4 -W 04:00 -m 2048 -w /cluster/scratch/sfux
 
-        ./start_jupyter_nb.sh -u sfux -b SLURM -n 1 -W 01:00 -m 1024 -j TRUE
+        ./start_jupyter_nb.sh -u lbonati -b PBS -n 1 -W 01:00 -m 1024 -j TRUE
 
-        ./start_jupyter_nb.sh --username sfux --batch_sys SLURM --numcores 2 --runtime 01:30 --memory 2048 --softwarestack new
+        ./start_jupyter_nb.sh --username sfux --batch_sys lbonati --numcores 2 --runtime 01:30 --memory 2048 
 
         ./start_jupyter_nb.sh -c $HOME/.jnb_config
 
 Format of configuration file:
 
-JNB_USERNAME=""             # ETH username for SSH connection to Euler
-JNB_BATCH="SLURM"           # Choose SLURM or LSF as batch system
+JNB_HOSTNAME="fe02.franklin.iit.local" # address of the cluster to connect to 
+JNB_USERNAME=""             # username for SSH connection to cluster
+JNB_BATCH="SLURM"           # Choose SLURM or LSF or PBS as batch system
 JNB_EXTRA_MODULES           # Additional modules to be loaded
 JNB_NUM_CPU=1               # Number of CPU cores to be used on the cluster
 JNB_NUM_GPU=0               # Number of GPUs to be used on the cluster
@@ -173,11 +178,9 @@ JNB_RUN_TIME="01:00"        # Run time limit for jupyter notebook/lab in hours a
 JNB_MEM_PER_CPU_CORE=1024   # Memory limit in MB per core
 JNB_WAITING_INTERVAL=60     # Time interval to check if the job on the cluster already started
 JNB_SSH_KEY_PATH=""         # Path to SSH key with non-standard name
-JNB_SOFTWARE_STACK="new"    # Software stack to be used (old, new)
 JNB_WORKING_DIR=""          # Working directory for jupyter notebook/lab
 JNB_JLAB=""                 # "lab" -> start jupyter lab; "" -> start jupyter notebook
 JNB_JKERNEL="FALSE"         # "FALSE" -> no Julia kernel; "TRUE" -> Julia kernel
-
 EOF
 exit 1
 }
@@ -195,6 +198,11 @@ do
                 -v|--version)
                 echo -e "start_jupyter_nb.sh version: $JNB_VERSION\n"
                 exit
+                ;;
+                -c|--cluster)
+                =$2
+                shift
+                shift
                 ;;
                 -u|--username)
                 JNB_USERNAME=$2
@@ -250,11 +258,6 @@ do
                 JNB_JLAB="lab"
                 shift
                 ;;
-                -s|--softwarestack)
-                JNB_SOFTWARE_STACK=$2
-                shift
-                shift
-                ;;
                 -w|--workdir)
                 JNB_WORKING_DIR=$2
                 shift
@@ -296,12 +299,22 @@ fi
 
 # check that JNB_USERNAME is not an empty string when there is no entry in ~/.ssh/config
 if [ -z "$JNB_USERNAME" ]; then
-        if ! grep -q "^[Hh][Oo][Ss][Tt] \(.* \)\?euler.ethz.ch\( .*\)\?$" "$HOME/.ssh/config" ; then
-            echo -e "Error: No ETH username is specified, terminating script\n"
+        if ! grep -q "^[Hh][Oo][Ss][Tt] \(.* \)\?$JNB_HOSTNAME\( .*\)\?$" "$HOME/.ssh/config" ; then
+            echo -e "Error: No username is specified, terminating script\n"
             display_help
         fi
 else
         echo -e "ETH username: $JNB_USERNAME"
+fi
+
+# check that JNB_USERNAME is not an empty string when there is no entry in ~/.ssh/config
+if [ -z "$JNB_USERNAME" ]; then
+        if ! grep -q "^[Hh][Oo][Ss][Tt] \(.* \)\?$JNB_HOSTNAME\( .*\)\?$" "$HOME/.ssh/config" ; then
+            echo -e "Error: No username is specified, terminating script\n"
+            display_help
+        fi
+else
+        echo -e "cluster username: $JNB_USERNAME"
 fi
 
 # check if JNB_JLAB is empty
@@ -320,8 +333,11 @@ case $JNB_BATCH in
         SLURM)
         echo -e "Using Slurm batch system"
         ;;
+        PBS)
+        echo -e "Using PBS batch system"
+        ;;
         *)
-        echo -e "Error: Unknown batch system $JNB_BATCH_SYSTEM. Please either specify LSF or SLURM as batch system"
+        echo -e "Error: Unknown batch system $JNB_BATCH_SYSTEM. Please either specify LSF, PBS or SLURM as batch system"
         display_help
         ;;
 esac
@@ -335,8 +351,8 @@ if ! [[ "$JNB_NUM_CPU" =~ ^[0-9]+$ ]]; then
 fi
 
 # check if JNB_NUM_CPU is <= 128
-if [ "$JNB_NUM_CPU" -gt "128" ]; then
-        echo -e "Error: $JNB_NUM_CPU -> Larger than 128. No distributed memory supported, therefore the number of CPU cores needs to be smaller or equal to 128\n"
+if [ "$JNB_NUM_CPU" -gt "20" ]; then
+        echo -e "Error: $JNB_NUM_CPU -> Larger than 20. No distributed memory supported, therefore the number of CPU cores needs to be smaller or equal to 20\n"
         display_help
 fi
 
@@ -353,8 +369,8 @@ if ! [[ "$JNB_NUM_GPU" =~ ^[0-9]+$ ]]; then
 fi
 
 # check if JNB_NUM_GPU is <= 8
-if [ "$JNB_NUM_GPU" -gt "8" ]; then
-        echo -e "Error: No distributed memory supported, therefore number of GPUs needs to be smaller or equal to 8\n"
+if [ "$JNB_NUM_GPU" -gt "4" ]; then
+        echo -e "Error: No distributed memory supported, therefore number of GPUs needs to be smaller or equal to 4\n"
         display_help
 fi
 
@@ -362,8 +378,10 @@ if [ "$JNB_NUM_GPU" -gt "0" ]; then
         echo -e "Requesting $JNB_NUM_GPU GPUs for running the jupyter $JNB_START_OPTION"
         if [ "$JNB_BATCH" == "LSF" ]; then
                 JNB_SNUM_GPU="-R \"rusage[ngpus_excl_p=$JNB_NUM_GPU]\""
-        else
+        elif [ "$JNB_BATCH" == "SLURM" ]; then
                 JNB_SNUM_GPU="--gpus=$JNB_NUM_GPU"
+        elif [ "$JNB_BATCH" == "PBS" ]; then
+                JNB_SNUM_GPU=":ngpus=$JNB_NUM_GPU"
         fi
 else
         JNB_SNUM_GPU=""
@@ -388,6 +406,10 @@ if ! [[ "$JNB_MEM_PER_CPU_CORE" =~ ^[0-9]+$ ]]; then
         display_help
 else
     echo -e "Memory per core set to $JNB_MEM_PER_CPU_CORE MB"
+    if [ "$JNB_BATCH" == "PBS" ]; then
+        JNB_MEM_PER_NODE=$((JNB_MEM_PER_CPU_CORE*JNB_NUM_CPU))
+        echo -e "Memory per node set to $JNB_MEM_PER_NODE MB"
+    fi
 fi
 
 # check if JNB_WAITING_INTERVAL is an integer
@@ -401,10 +423,6 @@ fi
 # check if JNB_JKERNEL is TRUE or FALSE and if the new software stack is used (julia kernel not supported with the old software stack)
 if [ "$JNB_JKERNEL" == "TRUE" ]; then
         JNB_JULIA="julia/1.6.5"
-        if [ "$JNB_SOFTWARE_STACK" = "old" ]; then
-                echo -e "Error: The Julia kernel is only supported when using the new software stack. Please change the software stack and try again\n"
-                display_help
-        fi
         echo -e "Enabling Julia kernel"
 elif [ "$JNB_JKERNEL" == "FALSE" ]; then
         JNB_JULIA=""
@@ -413,29 +431,6 @@ else
         display_help
 fi
 
-# check which software stack to use
-case $JNB_SOFTWARE_STACK in
-        old)
-        JNB_MODULE_COMMAND="new gcc/4.8.2 r/3.6.0 python/3.6.1 eth_proxy"
-        JNB_MODULE_COMMAND+=" ${JNB_EXTRA_MODULES[@]}"
-        echo -e "Using old software stack (new gcc/4.8.2 r/3.6.0 python/3.6.1 eth_proxy ${JNB_EXTRA_MODULES[@]})"
-        ;;
-        new)
-        if [ "$JNB_NUM_GPU" -gt "0" ]; then
-            JNB_MODULE_COMMAND="gcc/6.3.0 r/4.0.2 python_gpu/3.8.5 eth_proxy $JNB_JULIA"
-            JNB_MODULE_COMMAND+=" ${JNB_EXTRA_MODULES[@]}"
-            echo -e "Using new software stack (gcc/6.3.0 python_gpu/3.8.5 r/4.0.2 eth_proxy $JNB_JULIA ${JNB_EXTRA_MODULES[@]})"
-        else
-            JNB_MODULE_COMMAND="gcc/6.3.0 r/4.0.2 python/3.8.5 eth_proxy $JNB_JULIA"
-            JNB_MODULE_COMMAND+=" ${JNB_EXTRA_MODULES[@]}"
-            echo -e "Using new software stack (gcc/6.3.0 python/3.8.5 r/4.0.2 eth_proxy $JNB_JULIA ${JNB_EXTRA_MODULES[@]})"
-        fi  
-        ;;
-        *)
-        echo -e "Error: $JNB_SOFTWARE_STACK -> Unknown software stack. Software stack either needs to be set to 'new' or 'old'\n"
-        display_help
-        ;;
-esac
 
 # check if JNB_SSH_KEY_PATH is empty or contains a valid path
 if [ -z "$JNB_SSH_KEY_PATH" ]; then
@@ -520,6 +515,21 @@ export JNB_START_TIME=`date +"%Y-%m-%dT%H:%M:%S%z"`
 [ -n "$JNB_PYTHONPATH" ] && export PYTHONPATH="\$PYTHONPATH:$JNB_PYTHONPATH"
 jupyter $JNB_START_OPTION --no-browser --ip "\$JNB_IP_REMOTE" $JNB_SWORK_DIR &> \$HOME/jnbinfo
 ENDSBATCH
+elif [ "$JNB_BATCH" == "PBS" ]
+then
+echo "[log]: ssh $JNB_SSH_OPT qsub -l select=1:ncpus=$JNB_NUM_CPU:mpiprocs=${JNB_NUM_CPU}${JNB_SNUM_GPU}:mem=${JNB_MEM_PER_NODE} -l walltime=${JNB_RUN_TIME}:00 -l mem=${JNB_MEM_PER_NODE}"
+ssh $JNB_SSH_OPT qsub -l select=1:ncpus=$JNB_NUM_CPU:mpiprocs=${JNB_NUM_CPU}${JNB_SNUM_GPU}:mem=${JNB_MEM_PER_NODE} -l walltime=${JNB_RUN_TIME}:00 <<ENDPBS
+#!/bin/bash
+[ -n "$JNB_MODULE_USE" ] && module use "$JNB_MODULE_USE"
+module load $JNB_MODULE_COMMAND
+export XDG_RUNTIME_DIR=
+JNB_IP_REMOTE="\$(hostname -i)"
+echo "Remote IP:\$JNB_IP_REMOTE" >> \$HOME/jnbip
+export JNB_RUN_TIME=$JNB_RUN_TIME
+export JNB_START_TIME=`date +"%Y-%m-%dT%H:%M:%S%z"`
+[ -n "$JNB_PYTHONPATH" ] && export PYTHONPATH="\$PYTHONPATH:$JNB_PYTHONPATH"
+jupyter $JNB_START_OPTION --no-browser --ip "\$JNB_IP_REMOTE" $JNB_SWORK_DIR &> \$HOME/jnbinfo
+ENDPBS
 fi
 
 # wait until jupyter notebook/lab has started, poll every $JNB_WAITING_INTERVAL seconds to check if $HOME/jnbinfo exists
@@ -531,7 +541,7 @@ while ! [ -e \$HOME/jnbinfo -a -s \$HOME/jnbinfo ]; do
 done
 ENDSSH
 
-# get remote ip, port and token from files stored on Euler
+# get remote ip, port and token from files stored on cluster
 echo -e "Receiving ip, port and token from jupyter $JNB_START_OPTION"
 JNB_REMOTE_IP=$(ssh $JNB_SSH_OPT "cat \$HOME/jnbip | grep -m1 'Remote IP' | cut -d ':' -f 2")
 JNB_REMOTE_PORT=$(ssh $JNB_SSH_OPT "cat \$HOME/jnbinfo | grep -m1 token | cut -d '/' -f 3 | cut -d ':' -f 2")
@@ -542,7 +552,7 @@ if  [[ "$JNB_REMOTE_IP" == "" ]]; then
 cat <<EOF
 Error: remote ip is not defined. Terminating script.
 * Please check login to the cluster and check with bjobs if the batch job on the cluster is running and terminate it with bkill.
-* Please check the /cluster/home/$JNB_USERNAME/jnbinfo on Euler for logs regarding the failure to identify the remote ip on the cluster
+* Please check the jnbinfo file on cluster for logs regarding the failure to identify the remote ip on the cluster
 EOF
 exit 1
 fi
@@ -551,7 +561,7 @@ if  [[ "$JNB_REMOTE_PORT" == "" ]]; then
 cat <<EOF
 Error: remote port is not defined. Terminating script.
 * Please check login to the cluster and check with bjobs if the batch job on the cluster is running and terminate it with bkill.
-* Please check the /cluster/home/$JNB_USERNAME/jnbinfo on Euler for logs regarding the failure to identify the remote ip on the cluster
+* Please check the jnbinfo file on cluster for logs regarding the failure to identify the remote ip on the cluster
 EOF
 exit 1
 fi
@@ -560,7 +570,7 @@ if  [[ "$JNB_TOKEN" == "" ]]; then
 cat <<EOF
 Error: token for the jupyter $JNB_START_OPTION session is not defined. Terminating script.
 * Please check login to the cluster and check with bjobs if the batch job on the cluster is running and terminate it with bkill.
-* Please check the /cluster/home/$JNB_USERNAME/jnbinfo on Euler for logs regarding the failure to identify the remote ip on the cluster
+* Please check the jnbinfo file on cluster for logs regarding the failure to identify the remote ip on the cluster
 EOF
 exit 1
 fi
