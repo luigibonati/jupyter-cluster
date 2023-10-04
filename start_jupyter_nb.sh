@@ -94,7 +94,7 @@ JNB_MEM_PER_CPU_CORE=0
 JNB_NUM_GPU=0
 
 # Waiting interval default      : 60 seconds
-JNB_WAITING_INTERVAL=10
+JNB_WAITING_INTERVAL=30
 
 # SSH key location default      : no default
 JNB_SSH_KEY_PATH=""
@@ -524,7 +524,8 @@ ssh $JNB_SSH_OPT qsub -l select=1:ncpus=$JNB_NUM_CPU:mpiprocs=${JNB_NUM_CPU}${JN
 [ -n "$JNB_MODULE_USE" ] && module use "$JNB_MODULE_USE"
 module load $JNB_MODULE_COMMAND
 export XDG_RUNTIME_DIR=
-JNB_IP_REMOTE="\$(hostname -i)"
+HNAME="\$(hostname -I)"
+JNB_IP_REMOTE="\$(echo \$HNAME | awk '{split(\$0,a," "); print a[1]}')"
 echo "Remote IP:\$JNB_IP_REMOTE" >> \$HOME/jnbip
 export JNB_RUN_TIME=$JNB_RUN_TIME
 export JNB_START_TIME=`date +"%Y-%m-%dT%H:%M:%S%z"`
