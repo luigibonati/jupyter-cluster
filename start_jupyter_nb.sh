@@ -94,7 +94,7 @@ JNB_MEM_PER_CPU_CORE=0
 JNB_NUM_GPU=0
 
 # Waiting interval default      : 60 seconds
-JNB_WAITING_INTERVAL=60
+JNB_WAITING_INTERVAL=10
 
 # SSH key location default      : no default
 JNB_SSH_KEY_PATH=""
@@ -158,12 +158,13 @@ Optional arguments:
 
 Examples:
 
-        ./start_jupyter_nb.sh -u lbonati -b PBS -n 4 -W 04:00 -m 2048 -w /cluster/scratch/sfux
+        # Submit with 4 CPU tasks and 1 GPU for 4 hours and 16 GB/ram/core
+        ./start_jupyter_nb.sh -u lbonati -n 4 -g 1 -W 04:00 -m 16384
 
-        ./start_jupyter_nb.sh -u lbonati -b PBS -n 1 -W 01:00 -m 1024 -j TRUE
+        # Specify the queue system as well as a working directory
+        ./start_jupyter_nb.sh -u lbonati -b PBS -n 1 -g 1 -W 01:00 -m 1024 -w /projects/atomisticsimulations/ 
 
-        ./start_jupyter_nb.sh --username sfux --batch_sys lbonati --numcores 2 --runtime 01:30 --memory 2048 
-
+        # Specify a configuration file
         ./start_jupyter_nb.sh -c $HOME/.jnb_config
 
 Format of configuration file:
@@ -304,7 +305,7 @@ if [ -z "$JNB_USERNAME" ]; then
             display_help
         fi
 else
-        echo -e "ETH username: $JNB_USERNAME"
+        echo -e "cluster username: $JNB_USERNAME"
 fi
 
 # check that JNB_USERNAME is not an empty string when there is no entry in ~/.ssh/config
@@ -517,7 +518,7 @@ jupyter $JNB_START_OPTION --no-browser --ip "\$JNB_IP_REMOTE" $JNB_SWORK_DIR &> 
 ENDSBATCH
 elif [ "$JNB_BATCH" == "PBS" ]
 then
-echo "[log]: ssh $JNB_SSH_OPT qsub -l select=1:ncpus=$JNB_NUM_CPU:mpiprocs=${JNB_NUM_CPU}${JNB_SNUM_GPU}:mem=${JNB_MEM_PER_NODE} -l walltime=${JNB_RUN_TIME}:00 -l mem=${JNB_MEM_PER_NODE}"
+echo "[log]: ssh $JNB_SSH_OPT qsub -l select=1:ncpus=$JNB_NUM_CPU:mpiprocs=${JNB_NUM_CPU}${JNB_SNUM_GPU}:mem=${JNB_MEM_PER_NODE} -l walltime=${JNB_RUN_TIME}:00"
 ssh $JNB_SSH_OPT qsub -l select=1:ncpus=$JNB_NUM_CPU:mpiprocs=${JNB_NUM_CPU}${JNB_SNUM_GPU}:mem=${JNB_MEM_PER_NODE} -l walltime=${JNB_RUN_TIME}:00 <<ENDPBS
 #!/bin/bash
 [ -n "$JNB_MODULE_USE" ] && module use "$JNB_MODULE_USE"
@@ -528,6 +529,7 @@ echo "Remote IP:\$JNB_IP_REMOTE" >> \$HOME/jnbip
 export JNB_RUN_TIME=$JNB_RUN_TIME
 export JNB_START_TIME=`date +"%Y-%m-%dT%H:%M:%S%z"`
 [ -n "$JNB_PYTHONPATH" ] && export PYTHONPATH="\$PYTHONPATH:$JNB_PYTHONPATH"
+echo "[log] jupyter $JNB_START_OPTION --no-browser --ip \$JNB_IP_REMOTE $JNB_SWORK_DIR &> \$HOME/jnbinfo"
 jupyter $JNB_START_OPTION --no-browser --ip "\$JNB_IP_REMOTE" $JNB_SWORK_DIR &> \$HOME/jnbinfo
 ENDPBS
 fi
